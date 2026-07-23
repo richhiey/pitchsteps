@@ -36,13 +36,11 @@ export function ResultsScreen({
   );
   return (
     <main className="app-main app-main--results">
-      <section className="results-performance" aria-labelledby="performance-heading">
-        <div className="results-performance__heading">
-          <div>
-            <p className="eyebrow">Performance timeline</p>
-            <h2 id="performance-heading">Your pitch over time</h2>
-          </div>
-          <p>Compare your smoothed voice with the expected notes, then match each section to its assessment below.</p>
+      <section className="results-performance" aria-label="Performance results">
+        <div className="button-row results-actions">
+          <button className="button button--primary" onClick={onRetry}><RotateCcw aria-hidden="true" />Repeat warmup</button>
+          <button className="button button--ghost" onClick={onChange}><SlidersHorizontal aria-hidden="true" />Adjust settings</button>
+          <button className="button button--ghost" onClick={onReplay}><Volume2 aria-hidden="true" />Replay scale</button>
         </div>
         <PitchTimeline
           exercise={exercise}
@@ -70,6 +68,7 @@ export function ResultsScreen({
             </span>
           )}
         </div>
+        <p className="results-performance__description">Compare your smoothed voice with the expected notes, then match each section to its assessment below.</p>
       </section>
       <section className="results-summary">
         <div>
@@ -97,11 +96,6 @@ export function ResultsScreen({
         ))}
       </section>
       <p className="disclaimer">This is a practice estimate, not a professional vocal assessment.</p>
-      <div className="button-row">
-        <button className="button button--primary" onClick={onRetry}><RotateCcw aria-hidden="true" />Repeat warmup</button>
-        <button className="button button--ghost" onClick={onChange}><SlidersHorizontal aria-hidden="true" />Adjust settings</button>
-        <button className="button button--ghost" onClick={onReplay}><Volume2 aria-hidden="true" />Replay scale</button>
-      </div>
     </main>
   );
 }

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AudioLines } from "lucide-react";
 import { AudioEngine } from "./audio/AudioEngine";
 import { MicrophoneManager } from "./audio/MicrophoneManager";
 import { SessionRecorder } from "./audio/SessionRecorder";
@@ -26,6 +25,7 @@ export function App() {
   const animationRef = useRef<number | null>(null);
   const scheduledStartRef = useRef<number | null>(null);
   const recordingUrlRef = useRef<string | null>(null);
+  const initialMicrophoneRequestRef = useRef(false);
   const [clockSnapshot, setClockSnapshot] = useState<ExerciseClockSnapshot | null>(null);
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
   const [recordingStatus, setRecordingStatus] = useState<"idle" | "recording" | "processing" | "ready" | "unavailable">("idle");
@@ -45,8 +45,13 @@ export function App() {
         store.setPitchFrame(relativeFrame);
         if (relativeFrame.voiced && relativeFrame.confidence >= 0.65 && !relativeFrame.clipped) store.setCalibrated(true);
       },
+      onDetectorStatus: store.setDetectorStatus,
       onError: (message) => {
         store.setError(message);
+        if (useAppStore.getState().detectorKind === "swift-f0") {
+          store.setDetectorError(message);
+          return;
+        }
         store.dispatch("WORKER_FAILED");
       }
     });
@@ -57,6 +62,16 @@ export function App() {
       void engineRef.current?.cleanup();
       microphoneManager.stop();
     };
+  }, []);
+
+  useEffect(() => {
+    engineRef.current?.setDetector(store.detectorKind);
+  }, [store.detectorKind]);
+
+  useEffect(() => {
+    if (initialMicrophoneRequestRef.current) return;
+    initialMicrophoneRequestRef.current = true;
+    void requestMicrophone();
   }, []);
 
   useEffect(() => {
@@ -73,13 +88,15 @@ export function App() {
       const devices = microphoneManager.devices;
       store.setDevices(devices);
       store.setSelectedDeviceId(deviceId || devices[0]?.deviceId || "");
-      await engineRef.current?.initialize(stream, sessionId);
+      await engineRef.current?.initialize(stream, sessionId, store.detectorKind);
       await engineRef.current?.resume();
       store.setMicrophoneStatus(devices.length > 0 ? "granted" : "no-device");
       store.dispatch("MICROPHONE_GRANTED");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Microphone access is blocked or unavailable.";
       store.setError(message);
+      store.setDevices([]);
+      store.setSelectedDeviceId("");
       store.setMicrophoneStatus("denied");
       store.dispatch("MICROPHONE_DENIED");
     }
@@ -172,27 +189,28 @@ export function App() {
         <div className="brand">
           <span className="brand__mark"><AudioLines aria-hidden="true" /></span>
           <div>
-            <span>vocalwarmup</span>
+            <span>VocalWarmup</span>
             <small>A clearer start for your voice.</small>
           </div>
         </div>
-        <span className="privacy-pill">Audio stays on this device</span>
       </header>
       <PracticeControls
         microphoneStatus={store.microphoneStatus}
         devices={store.devices}
         selectedDeviceId={store.selectedDeviceId}
-        level={store.level}
         rootMidi={store.rootMidi}
         bpm={store.bpm}
         guideVolume={store.guideVolume}
+        detectorKind={store.detectorKind}
+        detectorStatus={store.detectorStatus}
+        detectorError={store.detectorError}
         canStart={startEnabled}
         locked={controlsLocked}
-        onRequestMicrophone={() => requestMicrophone()}
         onDeviceChange={(deviceId) => requestMicrophone(deviceId)}
         onRootChange={store.setRootMidi}
         onBpmChange={store.setBpm}
         onGuideVolumeChange={store.setGuideVolume}
+        onDetectorChange={store.setDetectorKind}
         onPreview={() => engineRef.current?.guideToneScheduler?.playTone(midiToFrequency(store.rootMidi), undefined, store.guideVolume)}
         onStart={startExercise}
       />
@@ -223,11 +241,19 @@ export function App() {
           onReplay={replayScale}
         />
       ) : (
-        <LandingScreen exercise={store.exercise} />
+        <LandingScreen
+          exercise={store.exercise}
+          selectedWarmupTitle={store.selectedWarmupTitle}
+          onWarmupChange={store.setSelectedWarmupTitle}
+        />
       )}
       <span className="sr-only" aria-live="polite">
         {store.latestPitch?.noteName ? `Detected ${store.latestPitch.noteName}` : "Listening for pitch"}
       </span>
+      <footer className="site-footer">
+        Audio stays on this device • © 2026 Richhiey Thomas
+      </footer>
     </div>
   );
 }
+import { AudioLines } from "lucide-react";

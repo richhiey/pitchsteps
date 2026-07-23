@@ -1,20 +1,23 @@
-import { amplitudeToDbfs } from "../audio/levelAnalysis";
-import type { MicrophoneProcessorOptions, WorkletMessage } from "./worklet-messages";
+/* global AudioWorkletProcessor, currentTime, registerProcessor */
+
+const MIN_DBFS = -100;
+
+const amplitudeToDbfs = (amplitude) => {
+  if (amplitude <= 0) return MIN_DBFS;
+  return Math.max(MIN_DBFS, 20 * Math.log10(amplitude));
+};
 
 class MicrophoneProcessor extends AudioWorkletProcessor {
-  private readonly sessionId: string;
-  private readonly batch: Float32Array;
-  private writeIndex = 0;
-  private clipBlocks = 0;
-
-  constructor(options?: AudioWorkletNodeOptions) {
+  constructor(options) {
     super();
-    const processorOptions = (options?.processorOptions ?? {}) as MicrophoneProcessorOptions;
+    const processorOptions = options?.processorOptions ?? {};
     this.sessionId = processorOptions.sessionId;
     this.batch = new Float32Array(processorOptions.batchSize || 2048);
+    this.writeIndex = 0;
+    this.clipBlocks = 0;
   }
 
-  process(inputs: Float32Array[][]): boolean {
+  process(inputs) {
     const input = inputs[0];
     if (!input || input.length === 0) return true;
     const channelCount = input.length;
@@ -32,9 +35,7 @@ class MicrophoneProcessor extends AudioWorkletProcessor {
       this.writeIndex += 1;
       if (this.writeIndex >= this.batch.length) {
         const samples = this.batch.slice();
-        this.port.postMessage({ type: "samples", sessionId: this.sessionId, timestamp: currentTime, samples } satisfies WorkletMessage, [
-          samples.buffer
-        ]);
+        this.port.postMessage({ type: "samples", sessionId: this.sessionId, timestamp: currentTime, samples }, [samples.buffer]);
         this.writeIndex = 0;
       }
     }
@@ -49,7 +50,7 @@ class MicrophoneProcessor extends AudioWorkletProcessor {
       peak,
       rmsDbfs: amplitudeToDbfs(rms),
       clipped: this.clipBlocks >= 3
-    } satisfies WorkletMessage);
+    });
     return true;
   }
 }

@@ -5,6 +5,10 @@ export interface PitchCandidate {
   yinValue: number;
 }
 
+export type PitchDetectorKind = "yin" | "swift-f0";
+
+export type PitchDetectorStatus = "idle" | "loading" | "ready" | "error";
+
 export interface PitchFrame {
   sessionId: string;
   timestamp: number;
@@ -23,6 +27,7 @@ export interface PitchFrame {
 }
 
 export interface DetectorConfiguration {
+  detectorKind: PitchDetectorKind;
   inputSampleRate: number;
   analysisSampleRate: number;
   frameSize: number;

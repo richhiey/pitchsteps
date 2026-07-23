@@ -1,4 +1,4 @@
-import type { DetectorConfiguration, PitchFrame } from "../types/pitch";
+import type { DetectorConfiguration, PitchDetectorStatus, PitchFrame } from "../types/pitch";
 
 export type PitchWorkerRequest =
   | { type: "configure"; sessionId: string; config: DetectorConfiguration }
@@ -8,10 +8,12 @@ export type PitchWorkerRequest =
 
 export type PitchWorkerResponse =
   | { type: "ready"; sessionId: string }
+  | { type: "detector-status"; sessionId: string; status: PitchDetectorStatus }
   | { type: "pitch-frame"; sessionId: string; frame: PitchFrame }
   | { type: "error"; sessionId: string; message: string };
 
 export const DEFAULT_DETECTOR_CONFIG: DetectorConfiguration = {
+  detectorKind: "yin",
   inputSampleRate: 48000,
   analysisSampleRate: 16000,
   frameSize: 1024,

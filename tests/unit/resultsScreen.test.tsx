@@ -38,12 +38,14 @@ describe("ResultsScreen", () => {
       />
     );
 
-    expect(screen.getByText("Your pitch over time")).toBeTruthy();
+    expect(screen.queryByText("Performance timeline")).toBeNull();
+    expect(screen.queryByText("Your pitch over time")).toBeNull();
     expect(screen.getByTestId("pitch-timeline").getAttribute("aria-label")).toContain("Completed exercise");
     expect(container.querySelector("svg")).toBeTruthy();
     expect(container.querySelectorAll(".note-result")).toHaveLength(8);
     expect(screen.getByText("Timeline segment 1")).toBeTruthy();
     expect(screen.getByText("Hear your performance")).toBeTruthy();
+    expect(screen.getByText("Compare your smoothed voice with the expected notes, then match each section to its assessment below.")).toBeTruthy();
     const audio = container.querySelector("audio");
     expect(audio?.getAttribute("src")).toBe("blob:results-test");
 

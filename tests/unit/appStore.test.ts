@@ -45,4 +45,13 @@ describe("app store calibration", () => {
     expect(state.exercise.steps[0].target.noteName).toBe("G3");
     expect(state.exercise.steps).toHaveLength(8);
   });
+
+  it("rebuilds the target sequence when the selected warm-up changes", () => {
+    useAppStore.getState().setSelectedWarmupTitle("Trill to Vowel");
+
+    const state = useAppStore.getState();
+    expect(state.exercise.name).toBe("Trill to Vowel");
+    expect(state.exercise.steps).toHaveLength(9);
+    expect(state.exercise.steps[0].target.midi).toBe(state.rootMidi);
+  });
 });

@@ -8,6 +8,8 @@ interface PitchTimelineProps {
   activeStep: ExerciseStep | null;
   model: PitchTimelineModel;
   completed?: boolean;
+  disabled?: boolean;
+  countInBeat?: number | null;
   playbackAudioRef?: RefObject<HTMLAudioElement | null>;
   playbackEnabled?: boolean;
 }
@@ -31,6 +33,8 @@ export function PitchTimeline({
   activeStep,
   model,
   completed = false,
+  disabled = false,
+  countInBeat = null,
   playbackAudioRef,
   playbackEnabled = false
 }: PitchTimelineProps) {
@@ -47,14 +51,18 @@ export function PitchTimeline({
   const detected = displayMidi !== null
     ? `${midiToNoteName(displayMidi)}${liveCents === null ? "" : `, ${liveCents >= 0 ? "+" : ""}${Math.round(liveCents)} cents`}${model.holdingLastPitch ? ", held" : ""}`
     : "listening for pitch";
-  const guidance = completed
+  const guidance = disabled
+    ? "Ready to begin"
+    : completed
     ? "Session complete"
     : model.holdingLastPitch
       ? "Keep singing"
       : model.currentState === "in-tune"
         ? "Hold it"
         : model.currentState;
-  const targetDescription = activeStep
+  const targetDescription = disabled
+    ? "Exercise ready to start."
+    : activeStep
     ? `Target ${activeStep.target.solfege}, ${activeStep.target.noteName}.`
     : "Completed exercise.";
   const ariaLabel = `Pitch timeline. ${targetDescription} Smoothed pitch ${detected}. Guidance: ${guidance}. ${progress} percent complete.`;
@@ -102,7 +110,7 @@ export function PitchTimeline({
   }, [model.duration, playbackAudioRef, playbackEnabled]);
 
   return (
-    <figure className="pitch-timeline" aria-label={ariaLabel} data-testid="pitch-timeline">
+    <figure className={`pitch-timeline ${disabled ? "pitch-timeline--disabled" : ""} ${countInBeat !== null ? "pitch-timeline--counting-in" : ""}`} aria-label={ariaLabel} data-testid="pitch-timeline">
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-hidden="true" focusable="false">
         <rect x={PLOT_LEFT} y={PLOT_TOP} width={PLOT_WIDTH} height={PLOT_HEIGHT} rx="12" className="pitch-timeline__canvas" />
 
@@ -203,6 +211,11 @@ export function PitchTimeline({
           </g>
         ) : null}
       </svg>
+      {countInBeat !== null ? (
+        <div className="pitch-timeline__count-in" aria-live="polite" aria-label={`Count in ${countInBeat}`}>
+          {countInBeat}
+        </div>
+      ) : null}
       <figcaption>
         <span><i className="legend-line legend-line--target" /> Expected pitch</span>
         <span><i className="legend-line legend-line--voice" /> Smoothed voice</span>

@@ -1,6 +1,6 @@
 import type { SessionState } from "./session";
 
-export type Solfege = "Do" | "Re" | "Mi" | "Fa" | "Sol" | "La" | "Ti";
+export type Solfege = "Do" | "Di" | "Re" | "Ri" | "Mi" | "Fa" | "Fi" | "Sol" | "Si" | "La" | "Li" | "Ti";
 export type GuideToneMode = "each-note" | "tonic-only" | "sustained" | "off";
 
 export interface TargetNote {

@@ -1,10 +1,9 @@
-import { Headphones, Mic, Play, RefreshCw, Volume2 } from "lucide-react";
+import { Play, Volume2 } from "lucide-react";
 import { NOTE_OPTIONS, midiToOctave, midiToNoteName } from "../pitch/conversion/midiToNote";
-import type { LevelFrame } from "../types/audio";
+import { hasMicrophonePermission } from "../store/selectors";
 import type { MicrophoneStatus } from "../types/session";
-import { InputMeter } from "./InputMeter";
+import type { PitchDetectorKind, PitchDetectorStatus } from "../types/pitch";
 
-const TEMPO_OPTIONS = Array.from({ length: 13 }, (_, index) => 60 + index * 5);
 const NOTE_GROUPS = [3, 4, 5].map((octave) => ({
   octave,
   notes: NOTE_OPTIONS.filter((note) => midiToOctave(note.midi) === octave)
@@ -14,75 +13,56 @@ interface PracticeControlsProps {
   microphoneStatus: MicrophoneStatus;
   devices: MediaDeviceInfo[];
   selectedDeviceId: string;
-  level: LevelFrame | null;
   rootMidi: number;
   bpm: number;
   guideVolume: number;
+  detectorKind?: PitchDetectorKind;
+  detectorStatus?: PitchDetectorStatus;
+  detectorError?: string | null;
   canStart: boolean;
   locked: boolean;
-  onRequestMicrophone: () => void;
   onDeviceChange: (deviceId: string) => void;
   onRootChange: (midi: number) => void;
   onBpmChange: (bpm: number) => void;
   onGuideVolumeChange: (volume: number) => void;
+  onDetectorChange?: (detectorKind: PitchDetectorKind) => void;
   onPreview: () => void;
   onStart: () => void;
 }
-
-const readinessMessage = (
-  status: MicrophoneStatus,
-  canStart: boolean,
-  hasDevices: boolean
-): string => {
-  if (canStart) return "Ready. Take an easy breath and begin when you are comfortable.";
-  if (status === "requesting") return "Waiting for microphone permission…";
-  if (status === "denied" || status === "error") return "Allow microphone access in your browser, then try again.";
-  if (status === "no-device" || (status !== "unknown" && !hasDevices)) return "No microphone was found. Connect one and recheck.";
-  if (status === "clipping") return "Your input is too loud. Move back slightly or lower the input level.";
-  if (status === "too-quiet") return "Hum one comfortable note a little louder to complete the sound check.";
-  if (hasDevices) return "Hum one comfortable note to complete the sound check.";
-  return "Allow microphone access, then hum one comfortable note.";
-};
 
 export function PracticeControls({
   microphoneStatus,
   devices,
   selectedDeviceId,
-  level,
   rootMidi,
   bpm,
   guideVolume,
+  detectorKind = "yin",
+  detectorStatus = "idle",
+  detectorError = null,
   canStart,
   locked,
-  onRequestMicrophone,
   onDeviceChange,
   onRootChange,
   onBpmChange,
   onGuideVolumeChange,
+  onDetectorChange = () => undefined,
   onPreview,
   onStart
 }: PracticeControlsProps) {
   const hasDevices = devices.length > 0;
-  const hasPermission = microphoneStatus !== "unknown"
-    && microphoneStatus !== "requesting"
-    && microphoneStatus !== "denied"
-    && hasDevices;
-  const message = locked
-    ? "Warmup in progress. Stop the session to change these settings."
-    : readinessMessage(microphoneStatus, canStart, hasDevices);
-
+  const hasPermission = hasMicrophonePermission(microphoneStatus);
+  const microphonePlaceholder = microphoneStatus === "requesting"
+    ? "Requesting microphone…"
+    : microphoneStatus === "denied"
+      ? "Microphone permission denied"
+      : microphoneStatus === "no-device"
+        ? "No microphone detected"
+        : "Allow microphone first";
   return (
     <div className="practice-controls">
-      <section className="selector-bar" aria-labelledby="warmup-settings-heading">
-        <div className="selector-bar__title">
-          <Headphones aria-hidden="true" />
-          <div>
-            <h2 id="warmup-settings-heading">Set your warmup</h2>
-            <span>Ascending major scale · two beats per note</span>
-          </div>
-        </div>
-
-        <label className="selector-field" htmlFor="starting-note">
+      <section className="selector-bar" aria-label="Warmup controls">
+        <label className="selector-field selector-field--note" htmlFor="starting-note">
           <span>Starting note</span>
           <select
             id="starting-note"
@@ -100,49 +80,60 @@ export function PracticeControls({
           </select>
         </label>
 
-        <label className="selector-field" htmlFor="tempo">
+        <button className="button button--secondary button--hear" onClick={onPreview}>
+          <Volume2 aria-hidden="true" />
+          Hear {midiToNoteName(rootMidi)}
+        </button>
+
+        <label className="selector-field selector-field--tempo" htmlFor="tempo">
           <span>Tempo</span>
+          <div className="tempo-input">
+            <input
+              id="tempo"
+              aria-label="Tempo"
+              type="number"
+              min="60"
+              max="120"
+              step="5"
+              value={bpm}
+              disabled={locked}
+              onChange={(event) => onBpmChange(Math.min(120, Math.max(60, Number(event.target.value) || 60)))}
+            />
+            <span>BPM</span>
+          </div>
+        </label>
+
+        <label className="selector-field" htmlFor="pitch-estimator">
+          <span>Pitch estimator</span>
           <select
-            id="tempo"
-            value={bpm}
+            id="pitch-estimator"
+            value={detectorKind}
             disabled={locked}
-            onChange={(event) => onBpmChange(Number(event.target.value))}
+            onChange={(event) => onDetectorChange(event.target.value as PitchDetectorKind)}
           >
-            {TEMPO_OPTIONS.map((tempo) => (
-              <option key={tempo} value={tempo}>{tempo} BPM</option>
-            ))}
+            <option value="yin">YIN</option>
+            <option value="swift-f0">swift-f0</option>
           </select>
+          {detectorStatus === "loading" && <small>Loading model…</small>}
+          {detectorStatus === "error" && <small role="alert">{detectorError ?? "Model unavailable"}</small>}
         </label>
 
         <label className="selector-field selector-field--microphone" htmlFor="microphone-device">
           <span>Microphone</span>
           <select
             id="microphone-device"
-            value={hasDevices ? selectedDeviceId : ""}
-            disabled={locked || !hasDevices}
+            value={hasPermission && hasDevices ? selectedDeviceId : ""}
+            disabled={locked || !hasPermission || !hasDevices}
             onChange={(event) => onDeviceChange(event.target.value)}
           >
-            {!hasDevices && <option value="">Allow microphone first</option>}
-            {devices.map((device, index) => (
+            {(!hasPermission || !hasDevices) && <option value="">{microphonePlaceholder}</option>}
+            {hasPermission && devices.map((device, index) => (
               <option key={device.deviceId || index} value={device.deviceId}>
                 {device.label || `Microphone ${index + 1}`}
               </option>
             ))}
           </select>
         </label>
-      </section>
-
-      <section className="readiness-panel" aria-labelledby="sound-check-heading">
-        <div className="readiness-panel__status">
-          <div className="sound-check-heading">
-            <span className={`status-dot${canStart ? " status-dot--ready" : ""}`} aria-hidden="true" />
-            <div>
-              <h2 id="sound-check-heading">{canStart ? "Sound check complete" : "Quick sound check"}</h2>
-              <p aria-live="polite">{message}</p>
-            </div>
-          </div>
-          <InputMeter level={level} />
-        </div>
 
         <div className="guide-control">
           <label htmlFor="guide-volume">
@@ -163,32 +154,12 @@ export function PracticeControls({
           />
         </div>
 
-        <div className="readiness-panel__actions">
-          {!hasPermission ? (
-            <button
-              className="button button--secondary"
-              onClick={onRequestMicrophone}
-              disabled={locked || microphoneStatus === "requesting"}
-            >
-              <Mic aria-hidden="true" />
-              {microphoneStatus === "requesting" ? "Waiting…" : "Allow microphone"}
-            </button>
-          ) : (
-            <button className="button button--secondary" onClick={onRequestMicrophone} disabled={locked}>
-              <RefreshCw aria-hidden="true" />
-              Recheck
-            </button>
-          )}
-          <button className="button button--secondary" onClick={onPreview} disabled={locked || !hasPermission}>
-            <Volume2 aria-hidden="true" />
-            Hear {midiToNoteName(rootMidi)}
-          </button>
-          <button className="button button--primary button--start" onClick={onStart} disabled={locked || !canStart}>
-            <Play aria-hidden="true" />
-            Start warmup
-          </button>
-        </div>
+        <button className="button button--primary button--start" onClick={onStart} disabled={locked || !canStart}>
+          <Play aria-hidden="true" />
+          Start
+        </button>
       </section>
+
     </div>
   );
 }
