@@ -47,7 +47,8 @@ export function PitchTimeline({
   const liveCents = displayMidi === null || activeStep === null
     ? null
     : (displayMidi - activeStep.target.midi) * 100;
-  const progress = Math.round(model.playheadX * 100);
+  const playheadProgress = playbackEnabled ? model.playheadX : 0;
+  const progress = Math.round(playheadProgress * 100);
   const detected = displayMidi !== null
     ? `${midiToNoteName(displayMidi)}${liveCents === null ? "" : `, ${liveCents >= 0 ? "+" : ""}${Math.round(liveCents)} cents`}${model.holdingLastPitch ? ", held" : ""}`
     : "listening for pitch";
@@ -69,7 +70,7 @@ export function PitchTimeline({
 
   const pointX = model.currentPoint ? PLOT_LEFT + model.currentPoint.x * PLOT_WIDTH : null;
   const pointY = model.currentPoint ? PLOT_TOP + model.currentPoint.y * PLOT_HEIGHT : null;
-  const playheadX = PLOT_LEFT + model.playheadX * PLOT_WIDTH;
+  const playheadX = PLOT_LEFT + playheadProgress * PLOT_WIDTH;
   const playheadOffset = playheadX - PLOT_LEFT;
 
   useEffect(() => {
@@ -170,23 +171,25 @@ export function PitchTimeline({
           );
         })}
 
-        {model.trails.map((trail, index) =>
-          trail.points.length === 1 ? (
-            <circle
-              key={`${trail.state}-${index}`}
-              cx={PLOT_LEFT + trail.points[0].x * PLOT_WIDTH}
-              cy={PLOT_TOP + trail.points[0].y * PLOT_HEIGHT}
-              r="2.6"
-              className={`pitch-timeline__trail pitch-timeline__trail--${trail.state}`}
-            />
-          ) : (
-            <polyline
-              key={`${trail.state}-${index}`}
-              points={pointString(trail.points)}
-              className={`pitch-timeline__trail pitch-timeline__trail--${trail.state}`}
-            />
-          )
-        )}
+        <g className="pitch-timeline__trail-group">
+          {model.trails.map((trail, index) =>
+            trail.points.length === 1 ? (
+              <circle
+                key={`${trail.state}-${index}`}
+                cx={PLOT_LEFT + trail.points[0].x * PLOT_WIDTH}
+                cy={PLOT_TOP + trail.points[0].y * PLOT_HEIGHT}
+                r="2.6"
+                className={`pitch-timeline__trail pitch-timeline__trail--${trail.state}`}
+              />
+            ) : (
+              <polyline
+                key={`${trail.state}-${index}`}
+                points={pointString(trail.points)}
+                className={`pitch-timeline__trail pitch-timeline__trail--${trail.state}`}
+              />
+            )
+          )}
+        </g>
 
         <g
           ref={playheadGroupRef}

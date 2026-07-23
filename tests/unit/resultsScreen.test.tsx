@@ -9,7 +9,8 @@ import type { PitchFrame } from "../../src/types/pitch";
 describe("ResultsScreen", () => {
   it("retains the completed SVG performance timeline above the note assessments", () => {
     const exercise = buildExerciseDefinition({ rootMidi: 60, bpm: 90 });
-    const pitchFrames: PitchFrame[] = [0.1, 0.12, 0.14].map((timestamp) => ({
+    const duration = exercise.steps.at(-1)?.endTime ?? 0;
+    const pitchFrames: PitchFrame[] = [0.1, 0.12, 0.14, duration - 0.1].map((timestamp) => ({
       sessionId: "results-test",
       timestamp,
       frequencyHz: midiToFrequency(60),
@@ -41,6 +42,9 @@ describe("ResultsScreen", () => {
     expect(screen.queryByText("Performance timeline")).toBeNull();
     expect(screen.queryByText("Your pitch over time")).toBeNull();
     expect(screen.getByTestId("pitch-timeline").getAttribute("aria-label")).toContain("Completed exercise");
+    expect(screen.queryByText("Warmup complete")).toBeNull();
+    expect(screen.getByText("Try a comfortable starting note")).toBeTruthy();
+    expect(screen.getByText(/Start with C4/)).toBeTruthy();
     expect(container.querySelector("svg")).toBeTruthy();
     expect(container.querySelectorAll(".note-result")).toHaveLength(8);
     expect(screen.getByText("Timeline segment 1")).toBeTruthy();
@@ -56,16 +60,23 @@ describe("ResultsScreen", () => {
     const expectedLine = container.querySelector(".pitch-timeline__expected-line");
     const expectedPoints = expectedLine?.getAttribute("points");
     const trailCount = container.querySelectorAll(".pitch-timeline__trail").length;
+    const trailPoints = [...container.querySelectorAll<SVGPolylineElement>(".pitch-timeline__trail")]
+      .map((trail) => trail.getAttribute("points"));
+    const trailGroup = container.querySelector(".pitch-timeline__trail-group");
     const playhead = container.querySelector<SVGGElement>(".pitch-timeline__playhead-group");
     if (!audio) throw new Error("Expected assessment audio control");
     Object.defineProperty(audio, "duration", { configurable: true, value: 10 });
     audio.currentTime = 2;
     fireEvent.play(audio);
+    audio.currentTime = 8;
+    fireEvent.timeUpdate(audio);
 
     expect(playhead?.style.transform).toContain("179.2");
     expect(expectedLine?.getAttribute("points")).toBe(expectedPoints);
     expect(trailCount).toBeGreaterThan(0);
+    expect(trailPoints.some((points) => points?.split(" ").some((point) => Number(point.split(",")[0]) > 900))).toBe(true);
     expect(container.querySelectorAll(".pitch-timeline__trail")).toHaveLength(trailCount);
     expect(container.querySelectorAll(".pitch-timeline__target")).toHaveLength(8);
+    expect(trailGroup?.querySelectorAll(".pitch-timeline__trail")).toHaveLength(trailCount);
   });
 });

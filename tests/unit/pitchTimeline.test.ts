@@ -76,4 +76,12 @@ describe("pitch timeline model", () => {
     expect(above.currentPoint?.y).toBe(0);
     expect(above.outOfRange).toBe("above");
   });
+
+  it("keeps the complete trail available independently of the playback position", () => {
+    const exercise = buildExerciseDefinition({ rootMidi: 60, bpm: 60 });
+    const model = buildPitchTimelineModel(exercise, [frame(12, 60), frame(18, 60)], 2, { fullTrail: true });
+
+    expect(model.trails.flatMap((trail) => trail.points).some((point) => point.timestamp === 12)).toBe(true);
+    expect(model.trails.flatMap((trail) => trail.points).some((point) => point.timestamp === 18)).toBe(true);
+  });
 });

@@ -57,7 +57,8 @@ const DISPLAY_SAMPLE_INTERVAL_SECONDS = 0.025;
 export const buildPitchTimelineModel = (
   exercise: ExerciseDefinition,
   frames: PitchFrame[],
-  elapsed: number
+  elapsed: number,
+  options: { fullTrail?: boolean } = {}
 ): PitchTimelineModel => {
   const duration = exercise.steps.at(-1)?.endTime ?? 0;
   const minMidi = exercise.rootMidi - 1;
@@ -122,7 +123,8 @@ export const buildPitchTimelineModel = (
     holdingLastPitch = false;
   };
 
-  const eligibleFrames = frames.filter((frame) => frame.timestamp >= 0 && frame.timestamp <= Math.min(elapsed, duration));
+  const trailEnd = options.fullTrail ? duration : Math.min(elapsed, duration);
+  const eligibleFrames = frames.filter((frame) => frame.timestamp >= 0 && (options.fullTrail || frame.timestamp <= trailEnd));
   eligibleFrames.forEach((frame, index) => {
     const isLast = index === eligibleFrames.length - 1;
     const deltaTime = Math.max(0.001, frame.timestamp - (lastFrameTime ?? frame.timestamp - 0.016));

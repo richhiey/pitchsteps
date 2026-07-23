@@ -20,4 +20,19 @@ describe("PitchTimeline", () => {
     expect(container.querySelectorAll(".pitch-timeline__target")).toHaveLength(8);
     expect(container.querySelectorAll(".pitch-timeline__key")).toHaveLength(15);
   });
+
+  it("keeps the recording playhead at the start of the timeline", () => {
+    const exercise = buildExerciseDefinition({ rootMidi: 60, bpm: 90 });
+    const model = buildPitchTimelineModel(exercise, [], 2);
+    const { container } = render(
+      <PitchTimeline
+        exercise={exercise}
+        activeStep={exercise.steps[0]}
+        model={model}
+      />
+    );
+
+    expect(container.querySelector<SVGGElement>(".pitch-timeline__playhead-group")?.style.transform)
+      .toBe("translateX(0px)");
+  });
 });

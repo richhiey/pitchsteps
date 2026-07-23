@@ -3,6 +3,7 @@ import { Headphones, RotateCcw, SlidersHorizontal, Volume2 } from "lucide-react"
 import type { ExerciseDefinition } from "../types/exercise";
 import type { PitchFrame } from "../types/pitch";
 import type { SessionResult } from "../types/scoring";
+import { midiToNoteName } from "../pitch/conversion/midiToNote";
 import { buildPitchTimelineModel } from "../visualization/pitchTimelineModel";
 import { PitchTimeline } from "./PitchTimeline";
 
@@ -28,10 +29,35 @@ export function ResultsScreen({
   onReplay
 }: ResultsScreenProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const label = result.overallScore >= 90 ? "Nicely centred" : result.overallScore >= 75 ? "Mostly in tune" : result.overallScore >= 55 ? "Good practice start" : "Try a comfortable starting note";
+  const startingNote = midiToNoteName(exercise.rootMidi);
+  const suggestion = result.overallScore >= 90
+    ? {
+      title: "Nicely centred",
+      body: "Your pitch was accurate and steady. Keep using this starting note and build the same control through the exercise.",
+      tone: "positive"
+    }
+    : result.overallScore >= 75
+      ? {
+        title: "Mostly in tune",
+        body: "Your pitch is developing well. Repeat the warmup and give each note a little more time to settle.",
+        tone: "positive"
+      }
+      : result.overallScore >= 55
+        ? {
+          title: "Good practice start",
+          body: "You found part of the exercise. Try again with an even breath and a relaxed, steady sound.",
+          tone: "steady"
+        }
+        : {
+          title: "Try a comfortable starting note",
+          body: `Start with ${startingNote}. It gives you a clear, centred reference before you move through the rest of the exercise.`,
+          tone: "encouraging"
+        };
   const duration = exercise.steps.at(-1)?.endTime ?? 0;
+  // Build the completed timeline at its full duration so playback never reveals
+  // the pitch trail progressively; only the playhead follows the audio.
   const timelineModel = useMemo(
-    () => buildPitchTimelineModel(exercise, pitchFrames, duration),
+    () => buildPitchTimelineModel(exercise, pitchFrames, duration, { fullTrail: true }),
     [exercise, pitchFrames, duration]
   );
   return (
@@ -70,13 +96,17 @@ export function ResultsScreen({
         </div>
         <p className="results-performance__description">Compare your smoothed voice with the expected notes, then match each section to its assessment below.</p>
       </section>
-      <section className="results-summary">
-        <div>
-          <p className="eyebrow">Warmup complete</p>
-          <h1>{label}</h1>
-          <p>{result.completedNotes} of {result.totalNotes} notes had enough voiced audio.</p>
+      <section className={`results-summary results-summary--${suggestion.tone}`} aria-label="Assessment summary">
+        <div className="results-summary__coverage">
+          <p className="eyebrow">Coverage</p>
+          <strong>{result.completedNotes} of {result.totalNotes}</strong>
+          <p>notes had enough voiced audio.</p>
         </div>
-        <strong aria-label={`Practice score ${result.overallScore}`}>{result.overallScore}</strong>
+        <div className="results-summary__suggestion">
+          <p className="eyebrow">Suggestion</p>
+          <h2>{suggestion.title}</h2>
+          <p>{suggestion.body}</p>
+        </div>
       </section>
       <div className="results-section-heading">
         <div>

@@ -15,6 +15,7 @@ import { ExerciseScreen } from "./components/ExerciseScreen";
 import { LandingScreen } from "./components/LandingScreen";
 import { PracticeControls } from "./components/PracticeControls";
 import { ResultsScreen } from "./components/ResultsScreen";
+import { AboutModal } from "./components/AboutModal";
 
 const microphoneManager = new MicrophoneManager();
 
@@ -29,6 +30,7 @@ export function App() {
   const [clockSnapshot, setClockSnapshot] = useState<ExerciseClockSnapshot | null>(null);
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
   const [recordingStatus, setRecordingStatus] = useState<"idle" | "recording" | "processing" | "ready" | "unavailable">("idle");
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const startEnabled = useMemo(
     () => canStartExercise(store.microphoneStatus, store.calibrated, store.level, store.selectedDeviceId),
@@ -102,7 +104,16 @@ export function App() {
     }
   };
 
+  const stopAudioCapture = () => {
+    microphoneManager.stop();
+    void engineRef.current?.cleanup(false);
+  };
+
   const startExercise = async () => {
+    const hasLiveInput = microphoneManager.stream?.getAudioTracks().some((track) => track.readyState === "live") ?? false;
+    if (!engineRef.current?.audioContext || !hasLiveInput) {
+      await requestMicrophone(store.selectedDeviceId);
+    }
     if (!engineRef.current?.audioContext) return;
     if (recordingUrlRef.current) {
       URL.revokeObjectURL(recordingUrlRef.current);
@@ -117,6 +128,25 @@ export function App() {
     await engineRef.current.resume();
     engineRef.current.guideToneScheduler?.scheduleCountInAndGuides(store.exercise, scheduledStartRef.current, store.guideVolume);
     runClock(sessionId);
+  };
+
+  const completeSession = async (sessionId: string, result: ReturnType<typeof scoreSession>) => {
+    if (recorderRef.current.isRecording) {
+      setRecordingStatus("processing");
+      const blob = await recorderRef.current.stop();
+      if (blob && useAppStore.getState().sessionId === sessionId) {
+        const url = URL.createObjectURL(blob);
+        recordingUrlRef.current = url;
+        setRecordingUrl(url);
+        setRecordingStatus("ready");
+      } else if (useAppStore.getState().sessionId === sessionId) {
+        setRecordingStatus("unavailable");
+      }
+    }
+    stopAudioCapture();
+    if (useAppStore.getState().sessionId !== sessionId) return;
+    store.setResult(result);
+    store.dispatch("EXERCISE_FINISHED");
   };
 
   const runClock = (sessionId: string) => {
@@ -134,21 +164,7 @@ export function App() {
       }
       if (snapshot.phase === "complete") {
         const result = scoreSession(sessionId, store.exercise, useAppStore.getState().pitchFrames);
-        if (recorderRef.current.isRecording) {
-          setRecordingStatus("processing");
-          void recorderRef.current.stop().then((blob) => {
-            if (!blob || useAppStore.getState().sessionId !== sessionId) {
-              setRecordingStatus(blob ? "idle" : "unavailable");
-              return;
-            }
-            const url = URL.createObjectURL(blob);
-            recordingUrlRef.current = url;
-            setRecordingUrl(url);
-            setRecordingStatus("ready");
-          });
-        }
-        store.setResult(result);
-        store.dispatch("EXERCISE_FINISHED");
+        void completeSession(sessionId, result);
         engine.guideToneScheduler?.playTone(midiToFrequency(store.rootMidi + 12), engine.audioContext.currentTime, 0.25, 0.12);
         return;
       }
@@ -162,6 +178,7 @@ export function App() {
     scheduledStartRef.current = null;
     setClockSnapshot(null);
     void recorderRef.current.stop();
+    stopAudioCapture();
     setRecordingStatus("idle");
     engineRef.current?.guideToneScheduler?.stop();
     store.dispatch("STOP");
@@ -186,14 +203,15 @@ export function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <div className="brand">
+        <button className="brand" type="button" onClick={() => setAboutOpen(true)} aria-label="Open about VocalWarmup">
           <span className="brand__mark"><AudioLines aria-hidden="true" /></span>
           <div>
             <span>VocalWarmup</span>
             <small>A clearer start for your voice.</small>
           </div>
-        </div>
+        </button>
       </header>
+      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <PracticeControls
         microphoneStatus={store.microphoneStatus}
         devices={store.devices}
