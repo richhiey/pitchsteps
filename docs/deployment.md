@@ -1,6 +1,6 @@
 # Vercel Deployment
 
-VocalWarmup is deployed as a static Vite application. It has no server-side
+pitchsteps is deployed as a static Vite application. It has no server-side
 runtime, environment variables, or uploaded audio data.
 
 Production: [https://pitchsteps.vercel.app](https://pitchsteps.vercel.app)

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("renders setup screen with disabled start gate", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("VocalWarmup", { exact: true })).toBeVisible();
+  await expect(page.getByText("pitchsteps", { exact: true })).toBeVisible();
   const warmupRegion = page.getByRole("region", { name: "Warm-up" });
   await expect(warmupRegion).toBeVisible();
   await expect(warmupRegion.getByRole("combobox")).toHaveValue("Major Scale");

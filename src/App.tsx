@@ -203,10 +203,10 @@ export function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <button className="brand" type="button" onClick={() => setAboutOpen(true)} aria-label="Open about VocalWarmup">
+        <button className="brand" type="button" onClick={() => setAboutOpen(true)} aria-label="Open about pitchsteps">
           <span className="brand__mark"><AudioLines aria-hidden="true" /></span>
           <div>
-            <span>VocalWarmup</span>
+            <span>pitchsteps</span>
             <small>A clearer start for your voice.</small>
           </div>
         </button>

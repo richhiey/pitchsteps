@@ -30,9 +30,9 @@ export function AboutModal({ onClose }: AboutModalProps) {
         <div className="about-modal__header">
           <div>
             <p className="eyebrow">About the project</p>
-            <h2 id="about-title">VocalWarmup</h2>
+            <h2 id="about-title">pitchsteps</h2>
           </div>
-          <button ref={closeButtonRef} className="about-modal__close" type="button" onClick={onClose} aria-label="Close about VocalWarmup">
+          <button ref={closeButtonRef} className="about-modal__close" type="button" onClick={onClose} aria-label="Close about pitchsteps">
             <X aria-hidden="true" />
           </button>
         </div>
