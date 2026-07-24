@@ -26,7 +26,6 @@ export function App() {
   const animationRef = useRef<number | null>(null);
   const scheduledStartRef = useRef<number | null>(null);
   const recordingUrlRef = useRef<string | null>(null);
-  const initialMicrophoneRequestRef = useRef(false);
   const [clockSnapshot, setClockSnapshot] = useState<ExerciseClockSnapshot | null>(null);
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
   const [recordingStatus, setRecordingStatus] = useState<"idle" | "recording" | "processing" | "ready" | "unavailable">("idle");
@@ -71,19 +70,12 @@ export function App() {
   }, [store.detectorKind]);
 
   useEffect(() => {
-    if (initialMicrophoneRequestRef.current) return;
-    initialMicrophoneRequestRef.current = true;
-    void requestMicrophone();
-  }, []);
-
-  useEffect(() => {
     const activeTarget = clockSnapshot?.activeStep?.target ?? null;
     engineRef.current?.setTarget(activeTarget?.midi ?? null, activeTarget?.frequencyHz ?? null);
   }, [clockSnapshot?.activeStep?.target.midi]);
 
   const requestMicrophone = async (deviceId = store.selectedDeviceId) => {
     try {
-      store.dispatch("REQUEST_MICROPHONE");
       store.setMicrophoneStatus("requesting");
       const sessionId = store.newSession();
       const stream = await microphoneManager.request(deviceId || undefined);
@@ -93,14 +85,12 @@ export function App() {
       await engineRef.current?.initialize(stream, sessionId, store.detectorKind);
       await engineRef.current?.resume();
       store.setMicrophoneStatus(devices.length > 0 ? "granted" : "no-device");
-      store.dispatch("MICROPHONE_GRANTED");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Microphone access is blocked or unavailable.";
       store.setError(message);
       store.setDevices([]);
       store.setSelectedDeviceId("");
       store.setMicrophoneStatus("denied");
-      store.dispatch("MICROPHONE_DENIED");
     }
   };
 
@@ -224,7 +214,11 @@ export function App() {
         detectorError={store.detectorError}
         canStart={startEnabled}
         locked={controlsLocked}
-        onDeviceChange={(deviceId) => requestMicrophone(deviceId)}
+        onDeviceChange={(deviceId) => {
+          if (store.sessionState === "counting-in" || store.sessionState === "running") {
+            void requestMicrophone(deviceId);
+          }
+        }}
         onRootChange={store.setRootMidi}
         onBpmChange={store.setBpm}
         onGuideVolumeChange={store.setGuideVolume}
