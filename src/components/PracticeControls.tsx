@@ -22,6 +22,7 @@ interface PracticeControlsProps {
   canStart: boolean;
   locked: boolean;
   onDeviceChange: (deviceId: string) => void;
+  onRequestMicrophone: () => void;
   onRootChange: (midi: number) => void;
   onBpmChange: (bpm: number) => void;
   onGuideVolumeChange: (volume: number) => void;
@@ -43,6 +44,7 @@ export function PracticeControls({
   canStart,
   locked,
   onDeviceChange,
+  onRequestMicrophone,
   onRootChange,
   onBpmChange,
   onGuideVolumeChange,
@@ -134,6 +136,16 @@ export function PracticeControls({
             ))}
           </select>
         </label>
+        {!hasPermission && (
+          <button
+            className="button button--secondary"
+            type="button"
+            onClick={onRequestMicrophone}
+            disabled={locked || microphoneStatus === "requesting"}
+          >
+            {microphoneStatus === "requesting" ? "Waiting for permission…" : "Allow microphone"}
+          </button>
+        )}
 
         <div className="guide-control">
           <label htmlFor="guide-volume">

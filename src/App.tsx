@@ -94,6 +94,24 @@ export function App() {
     }
   };
 
+  const allowMicrophone = async () => {
+    try {
+      store.setMicrophoneStatus("requesting");
+      const stream = await microphoneManager.request();
+      const devices = microphoneManager.devices;
+      microphoneManager.stop();
+      store.setDevices(devices);
+      store.setSelectedDeviceId(devices[0]?.deviceId ?? "");
+      store.setMicrophoneStatus(devices.length > 0 ? "granted" : "no-device");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Microphone access is blocked or unavailable.";
+      store.setError(message);
+      store.setDevices([]);
+      store.setSelectedDeviceId("");
+      store.setMicrophoneStatus("denied");
+    }
+  };
+
   const stopAudioCapture = () => {
     microphoneManager.stop();
     void engineRef.current?.cleanup(false);
@@ -214,11 +232,8 @@ export function App() {
         detectorError={store.detectorError}
         canStart={startEnabled}
         locked={controlsLocked}
-        onDeviceChange={(deviceId) => {
-          if (store.sessionState === "counting-in" || store.sessionState === "running") {
-            void requestMicrophone(deviceId);
-          }
-        }}
+        onDeviceChange={store.setSelectedDeviceId}
+        onRequestMicrophone={() => void allowMicrophone()}
         onRootChange={store.setRootMidi}
         onBpmChange={store.setBpm}
         onGuideVolumeChange={store.setGuideVolume}

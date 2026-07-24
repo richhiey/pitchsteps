@@ -5,6 +5,7 @@ import type { MicrophoneStatus } from "../../src/types/session";
 
 const callbacks = {
   onDeviceChange: vi.fn(),
+  onRequestMicrophone: vi.fn(),
   onRootChange: vi.fn(),
   onBpmChange: vi.fn(),
   onGuideVolumeChange: vi.fn(),
@@ -55,6 +56,7 @@ describe("PracticeControls", () => {
     expect(tempo.max).toBe("120");
     expect(microphone.disabled).toBe(true);
     expect(microphone.options[0].textContent).toBe("Allow microphone first");
+    expect((screen.getByRole("button", { name: "Allow microphone" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("populates the microphone dropdown and passes selector changes through", () => {
