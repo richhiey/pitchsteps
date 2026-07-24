@@ -8,7 +8,7 @@ export const transitionSession = (state: SessionState, event: SessionEvent): Ses
   if (event === "AUDIO_CONTEXT_SUSPENDED" && state === "running") return "paused";
 
   const transitions: Partial<Record<SessionState, Partial<Record<SessionEvent, SessionState>>>> = {
-    idle: { REQUEST_MICROPHONE: "requesting-microphone", START_EXERCISE: "counting-in", RESET: "idle" },
+    idle: { REQUEST_MICROPHONE: "requesting-microphone", RESET: "idle" },
     "requesting-microphone": { MICROPHONE_GRANTED: "calibrating", MICROPHONE_DENIED: "error", RESET: "idle" },
     calibrating: { CALIBRATION_PASSED: "ready", CALIBRATION_FAILED: "calibrating", RESET: "idle" },
     ready: { START_EXERCISE: "counting-in", CALIBRATION_STARTED: "calibrating", STOP: "ready", RESET: "idle" },
