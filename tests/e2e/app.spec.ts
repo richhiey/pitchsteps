@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test("renders setup screen with disabled start gate", async ({ page }) => {
+test("renders setup screen while microphone permission is pending", async ({ page }) => {
+  await page.addInitScript(() => {
+    // Keep permission pending on every platform, including runners with no mic.
+    navigator.mediaDevices.getUserMedia = () => new Promise<MediaStream>(() => undefined);
+  });
   await page.goto("/");
   await expect(page.getByText("pitchsteps", { exact: true })).toBeVisible();
   const warmupRegion = page.getByRole("region", { name: "Warm-up" });
