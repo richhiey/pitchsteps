@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "../../src/store/appStore";
+import { canStartExercise } from "../../src/store/selectors";
 
 describe("app store calibration", () => {
   beforeEach(() => {
@@ -33,6 +34,18 @@ describe("app store calibration", () => {
     useAppStore.getState().setCalibrated(true);
 
     expect(useAppStore.getState().sessionState).toBe("ready");
+  });
+
+  it("starts with microphone permission before the user sings", () => {
+    useAppStore.getState().setSelectedDeviceId("test-microphone");
+    const state = useAppStore.getState();
+    expect(canStartExercise(state.microphoneStatus, state.calibrated, state.level, state.selectedDeviceId)).toBe(true);
+    state.dispatch("START_EXERCISE");
+    expect(useAppStore.getState().sessionState).toBe("counting-in");
+    state.setCalibrated(true);
+    expect(useAppStore.getState().sessionState).toBe("counting-in");
+    state.dispatch("COUNT_IN_FINISHED");
+    expect(useAppStore.getState().sessionState).toBe("running");
   });
 
   it("rebuilds the warmup when the starting note or tempo changes", () => {

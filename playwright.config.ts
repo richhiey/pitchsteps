@@ -5,11 +5,11 @@ export default defineConfig({
   fullyParallel: true,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:5174",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5174",
     trace: "on-first-retry"
   },
-  webServer: {
-    command: "npm run dev -- --port 5174 --strictPort",
+  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
+    command: "npm run build && npx vite preview --host 127.0.0.1 --port 5174 --strictPort",
     url: "http://127.0.0.1:5174",
     reuseExistingServer: false,
     timeout: 120000

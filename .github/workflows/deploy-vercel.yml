@@ -35,8 +35,10 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Build application
-        run: npm run build
+      - name: Test production build in the browser
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
 
       - name: Deploy production build
         run: npx vercel deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}"

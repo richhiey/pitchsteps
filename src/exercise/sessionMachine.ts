@@ -10,7 +10,8 @@ export const transitionSession = (state: SessionState, event: SessionEvent): Ses
   const transitions: Partial<Record<SessionState, Partial<Record<SessionEvent, SessionState>>>> = {
     idle: { REQUEST_MICROPHONE: "requesting-microphone", RESET: "idle" },
     "requesting-microphone": { MICROPHONE_GRANTED: "calibrating", MICROPHONE_DENIED: "error", RESET: "idle" },
-    calibrating: { CALIBRATION_PASSED: "ready", CALIBRATION_FAILED: "calibrating", RESET: "idle" },
+    // Permission enables Start; users may stay silent until the count-in ends.
+    calibrating: { START_EXERCISE: "counting-in", CALIBRATION_PASSED: "ready", CALIBRATION_FAILED: "calibrating", RESET: "idle" },
     ready: { START_EXERCISE: "counting-in", CALIBRATION_STARTED: "calibrating", STOP: "ready", RESET: "idle" },
     "counting-in": { COUNT_IN_FINISHED: "running", STOP: "ready", RESET: "ready" },
     running: { PAUSE: "paused", EXERCISE_FINISHED: "completed", STOP: "ready", RESET: "ready" },
